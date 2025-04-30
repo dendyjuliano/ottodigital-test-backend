@@ -1,13 +1,17 @@
 package tests
 
 import (
+	"database/sql"
 	"otto-test-go/internal/db"
 	"otto-test-go/internal/models"
 	"otto-test-go/internal/repository"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
+
+var tx *sql.Tx
 
 // Update any tests that rely on database-specific features
 
@@ -17,13 +21,31 @@ func setupTest() error {
         return err
     }
 
-    // Reset tables for testing
-    _, err = db.GetDB().Exec("TRUNCATE TABLE vouchers")
+    // Start a transaction
+    tx, err = db.GetDB().Begin()
+    if err != nil {
+        return err
+    }
+
+    // Disable foreign key checks
+    _, err = tx.Exec("SET FOREIGN_KEY_CHECKS = 0")
     if err != nil {
         return err
     }
     
-    _, err = db.GetDB().Exec("TRUNCATE TABLE brands")
+    // Reset tables for testing
+    _, err = tx.Exec("TRUNCATE TABLE vouchers")
+    if err != nil {
+        return err
+    }
+    
+    _, err = tx.Exec("TRUNCATE TABLE brands")
+    if err != nil {
+        return err
+    }
+    
+    // Re-enable foreign key checks
+    _, err = tx.Exec("SET FOREIGN_KEY_CHECKS = 1")
     if err != nil {
         return err
     }
@@ -31,11 +53,19 @@ func setupTest() error {
     return nil
 }
 
+// Add a teardown function to be called after each test
+func teardownTest(t *testing.T) {
+    if tx != nil {
+        tx.Rollback()
+    }
+}
+
 func TestCreateBrand(t *testing.T) {
     err := setupTest()
     if err != nil {
         t.Fatalf("Failed to setup test: %v", err)
     }
+    defer teardownTest(t)
 
     repo := repository.NewBrandRepository(db.GetDB())
 
@@ -51,6 +81,7 @@ func TestGetBrand(t *testing.T) {
     if err != nil {
         t.Fatalf("Failed to setup test: %v", err)
     }
+    defer teardownTest(t)
 
     repo := repository.NewBrandRepository(db.GetDB())
 
@@ -69,6 +100,7 @@ func TestCreateVoucher(t *testing.T) {
     if err != nil {
         t.Fatalf("Failed to setup test: %v", err)
     }
+    defer teardownTest(t)
 
     brandRepo := repository.NewBrandRepository(db.GetDB())
     voucherRepo := repository.NewVoucherRepository(db.GetDB())
@@ -81,7 +113,8 @@ func TestCreateVoucher(t *testing.T) {
     voucher := models.Voucher{
         Code: "TEST123", 
         BrandID: brand.ID,
-        Discount: 10.0,  // Add missing field
+        Discount: 10.0,
+        ValidUntil: time.Now().AddDate(1, 0, 0), // 1 year from now
     }
     err = voucherRepo.Create(&voucher)
 
@@ -94,6 +127,7 @@ func TestGetVouchersByBrand(t *testing.T) {
     if err != nil {
         t.Fatalf("Failed to setup test: %v", err)
     }
+    defer teardownTest(t)
 
     brandRepo := repository.NewBrandRepository(db.GetDB())
     voucherRepo := repository.NewVoucherRepository(db.GetDB())
@@ -106,12 +140,14 @@ func TestGetVouchersByBrand(t *testing.T) {
     voucher1 := models.Voucher{
         Code: "TEST123", 
         BrandID: brand.ID,
-        Discount: 10.0,  // Add missing field
+        Discount: 10.0,
+        ValidUntil: time.Now().AddDate(1, 0, 0), // 1 year from now
     }
     voucher2 := models.Voucher{
         Code: "TEST456", 
         BrandID: brand.ID,
-        Discount: 20.0,  // Add missing field
+        Discount: 20.0,
+        ValidUntil: time.Now().AddDate(1, 0, 0), // 1 year from now
     }
     
     err = voucherRepo.Create(&voucher1)

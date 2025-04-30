@@ -20,10 +20,12 @@ func SetupRouter() *gin.Engine {
     // Set up repositories
     brandRepo := repository.NewBrandRepository(db.GetDB())
     voucherRepo := repository.NewVoucherRepository(db.GetDB())
+    transactionRepo := repository.NewTransactionRepository(db.GetDB())  // Add this
     
     // Set up handlers
     brandHandler := handlers.NewBrandHandler(brandRepo)
     voucherHandler := handlers.NewVoucherHandler(voucherRepo)
+    transactionHandler := handlers.NewTransactionHandler(transactionRepo, voucherRepo)  // Add this
     
     // Brand routes
     router.POST("/brands", brandHandler.CreateBrand)
@@ -32,7 +34,11 @@ func SetupRouter() *gin.Engine {
     
     // Voucher routes
     router.POST("/vouchers", voucherHandler.CreateVoucher)
-    router.GET("/vouchers/brand/:brand_id", voucherHandler.GetVouchersByBrand) 
+    router.GET("/vouchers/brand/:brand_id", voucherHandler.GetVouchersByBrand)
+    
+    // Transaction routes - add these new routes
+    router.POST("/transaction/redemption", transactionHandler.CreateRedemption)
+    router.GET("/transaction/redemption", transactionHandler.GetTransactionDetail)
     
     return router
 }

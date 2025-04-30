@@ -64,3 +64,26 @@ func (r *VoucherRepositoryImpl) GetByBrandID(brandID int) ([]models.Voucher, err
     }
     return vouchers, nil
 }
+
+func (r *VoucherRepositoryImpl) GetByID(id int) (*models.Voucher, error) {
+    query := `SELECT id, code, brand_id, discount, valid_until FROM vouchers WHERE id = ?`
+    
+    voucher := &models.Voucher{}
+    var validUntil sql.NullTime
+    err := r.db.QueryRow(query, id).Scan(
+        &voucher.ID, 
+        &voucher.Code, 
+        &voucher.BrandID, 
+        &voucher.Discount, 
+        &validUntil,
+    )
+    if err != nil {
+        return nil, err
+    }
+    
+    if validUntil.Valid {
+        voucher.ValidUntil = validUntil.Time
+    }
+    
+    return voucher, nil
+}
