@@ -1,0 +1,16 @@
+CREATE DATABASE IF NOT EXISTS ottotest;
+USE ottotest;
+
+CREATE TABLE IF NOT EXISTS brands (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS vouchers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    code VARCHAR(50) NOT NULL,
+    brand_id INT NOT NULL,
+    discount DECIMAL(10,2) NOT NULL,
+    valid_until DATETIME,
+    FOREIGN KEY (brand_id) REFERENCES brands(id)
+);
